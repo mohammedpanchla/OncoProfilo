@@ -1,13 +1,3 @@
----
-title: OncoProfilo
-emoji: 🧬
-colorFrom: green
-colorTo: blue
-sdk: docker
-pinned: false
-license: mit
----
-
 # 🧬 OncoProfilo
 **Breast Cancer Molecular Subtype Classification & Survival Risk Prediction**
 
