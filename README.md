@@ -1,13 +1,3 @@
----
-title: OncoProfilo v2
-emoji: 🧬
-colorFrom: purple
-colorTo: red
-sdk: gradio
-app_file: app.py
-pinned: false
----
-
 <div align="center">
 
 # 🧬 OncoProfilo v2
