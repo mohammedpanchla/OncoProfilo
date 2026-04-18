@@ -1,8 +1,18 @@
+---
+title: OncoProfilo
+emoji: 🧬
+colorFrom: purple
+colorTo: red
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 <div align="center">
 
-# 🧬 OncoProfilo v2
+# 🧬 OncoProfilo
 
-### Multi-Task Breast Cancer Subtype Classification + Survival Risk Prediction
+### Breast Cancer Subtype Classification & Survival Risk Prediction from RNA-seq
 
 **TCGA-BRCA · PAM50 · Multi-Task MLP · Cox-PH · SHAP · GDC API**
 
@@ -23,74 +33,87 @@
 
 ## Overview
 
-**OncoProfilo v2** is a production-ready multi-task clinical AI system that classifies breast cancer molecular subtypes (PAM50) and predicts patient survival risk from raw RNA-seq gene expression data — simultaneously, in a single forward pass.
+**OncoProfilo** is an end-to-end clinical AI system that classifies breast cancer molecular subtypes (PAM50) and predicts patient survival risk from raw RNA-seq gene expression data — simultaneously, in a single forward pass.
 
-The system is trained entirely on real patient data from **TCGA-BRCA** (The Cancer Genome Atlas), streamed live from the GDC and UCSC Xena APIs — no static files, no local downloads. A leakage-safe preprocessing pipeline, class-weighted loss training, and 5-fold stratified cross-validation make this a credible machine learning system rather than an overfit demo.
+The system is trained entirely on real patient data from **TCGA-BRCA** (The Cancer Genome Atlas Breast Invasive Carcinoma cohort), streamed live from the GDC API — no static files, no local downloads. A multi-task MLP with a shared encoder solves both classification and survival prediction from the same gene expression signal, and SHAP DeepExplainer provides per-patient gene-level explanations for every prediction.
 
-v2 upgrades the original OncoProfilo architecture with a full baseline comparison sweep (Logistic Regression, Random Forest, Extra Trees, XGBoost, LightGBM), smaller multi-task MLP variants with class-weighted cross-entropy, and a principled model selection cell that decides whether v2 outperforms the currently deployed model before saving any new artifacts.
+The trained model is deployed as an interactive Gradio application with a demo mode (real TCGA test sample) and a custom JSON input mode for arbitrary gene expression profiles.
 
 ---
 
 ## Clinical Problem Statement
 
-Breast cancer is not one disease — it is at least five. The PAM50 molecular subtypes (Luminal A, Luminal B, HER2-enriched, Basal-like, Normal-like) have dramatically different prognoses and respond differently to treatment. Determining subtype from routine gene expression data, and simultaneously estimating survival risk from the same signal, is a core challenge in precision oncology.
+Breast cancer is not one disease — it is at least five molecularly distinct subtypes with dramatically different prognoses and treatment responses. Determining a patient's PAM50 subtype from their tumor's gene expression profile, and simultaneously estimating their survival risk from the same biological signal, is a core challenge in precision oncology.
 
-OncoProfilo v2 demonstrates that a single multi-task neural network can solve both problems from raw FPKM expression values — and that class-weighted training closes the gap between majority and minority subtype performance.
+| Subtype | Biological Profile | Prognosis |
+|---|---|---|
+| **Luminal A** | ER+, slow-growing, low proliferation | Best |
+| **Luminal B** | ER+, faster-growing, higher proliferation | Good |
+| **HER2-enriched** | HER2 gene amplified, targeted therapy eligible | Moderate |
+| **Basal-like** | Triple-negative, most aggressive | Worst |
+| **Normal-like** | Resembles normal breast tissue | Variable |
+
+Each subtype has a unique gene expression signature. RNA-seq measures how active each gene is in a tumor. OncoProfilo learns to recognise these signatures and simultaneously output a survival risk score — all from the same 2,000 most variable genes.
 
 ---
 
 ## Architecture
 
 ```
-TCGA-BRCA RNA-seq (GDC API)
-         ↓
-  460 patients × 60,660 genes (FPKM-UQ)
-         ↓
-  Top-k Variance Gene Selection (k = 500)
-  Split-first — selected on training data only
-         ↓
-  Log1p Transform → StandardScaler
-         ↓
-┌────────────────────────────────────────┐
-│        OncoProfiloV2 (Multi-Task MLP)  │
-│                                        │
-│  Input (500) → Linear → BN → GELU     │
-│             → Linear → BN → GELU      │
-│             → Linear → BN → GELU      │
-│                    ↓                   │
-│     Shared Encoder (256 → 128 → 64)   │
-│           /              \             │
-│  Subtype Head          Survival Head   │
-│  Linear(64, 5)         Linear(64, 1)   │
-│  PAM50 Classes         Cox Log-Risk    │
-└────────────────────────────────────────┘
-         ↓                    ↓
-  5-Class Prediction    C-index / Risk Score
-  (CrossEntropy)        (Cox-PH Loss)
+TCGA-BRCA RNA-seq (GDC API — streamed, no local save)
+              ↓
+  419 patients × 60,660 genes (FPKM-UQ)
+              ↓
+  Top-2000 Variance Gene Selection
+  Log2 Normalization → StandardScaler
+              ↓
+┌─────────────────────────────────────────────┐
+│           OncoProfilo (Multi-Task MLP)       │
+│                                             │
+│  Input (2000)                               │
+│      → Linear(2000, 512) → BN → ReLU       │
+│      → Dropout(0.40)                        │
+│      → Linear(512, 256)  → BN → ReLU       │
+│      → Dropout(0.30)                        │
+│      → Linear(256, 128)  → BN → ReLU       │
+│                  ↓                          │
+│         Shared Encoder (128-dim)            │
+│              /            \                 │
+│   Subtype Head          Survival Head       │
+│  Linear → ReLU          Linear → ReLU      │
+│  → Dropout(0.2)         → Dropout(0.2)     │
+│  → Linear(64, 5)        → Linear(64, 1)    │
+│  PAM50 Classes          → Sigmoid          │
+│                          Cox Risk Score     │
+└─────────────────────────────────────────────┘
+         ↓                       ↓
+   5-Class Prediction       Survival Risk
+   (CrossEntropyLoss)       (Cox-PH Loss)
+         ↓                       ↓
+   SHAP DeepExplainer       Kaplan-Meier
+   Gene Importance          Risk Stratification
 ```
 
 ### Model Components
 
-| Module | Details |
+| Component | Details |
 |---|---|
-| **Gene Selection** | Top-k variance selector — fit on training split only, no leakage |
-| **Preprocessing** | Log1p transform → StandardScaler per split |
-| **Shared Encoder** | 3-layer MLP (256 → 128 → 64) · BatchNorm · GELU · Dropout(0.35) |
-| **Subtype Head** | Linear(64, 5) — PAM50 5-class classification |
-| **Survival Head** | Linear(64, 1) — unconstrained Cox log-risk score |
-| **Loss Function** | α × CrossEntropy(class_weighted) + β × CoxPH Loss |
-| **Optimizer** | AdamW · ReduceLROnPlateau · Gradient clipping (max_norm=1.0) |
-| **Explainability** | SHAP values on top selected genes |
+| **Gene Selection** | Top-2,000 most variable genes from 60,660 ENSEMBL genes |
+| **Preprocessing** | Log2 normalization → StandardScaler |
+| **Shared Encoder** | 3-layer MLP (2000 → 512 → 256 → 128) · BatchNorm · ReLU · Dropout |
+| **Subtype Head** | Linear(128→64) → ReLU → Dropout → Linear(64→5) — 5-class PAM50 |
+| **Survival Head** | Linear(128→64) → ReLU → Dropout → Linear(64→1) → Sigmoid — Cox risk |
+| **Total Parameters** | 1,207,430 (all trainable) |
+| **Loss Function** | Total = 1.0 × CrossEntropy + 0.5 × Cox-PH |
+| **Explainability** | SHAP DeepExplainer — global, per-subtype, and per-sample gene importance |
 
 ### Why This Architecture?
 
-**Multi-task learning** — Subtype classification and survival prediction share the same biological signal. A joint encoder forces the network to learn representations that are useful for both tasks, acting as a regulariser on the small TCGA training set.
+**Multi-task learning** — Subtype classification and survival prediction share the same underlying biological signal. A joint shared encoder forces the network to learn representations that are meaningful for both tasks simultaneously, acting as a natural regulariser on the limited TCGA training set size.
 
-**Class-weighted cross-entropy** — PAM50 labels are imbalanced (Luminal A dominates). Weighting each class inversely proportional to its frequency forces the network to treat minority subtypes as equally important during training, which directly improves Macro F1 over unweighted loss.
+**Cox Proportional Hazards loss** — Standard regression asks how close the predicted number is to the actual number. Cox loss asks a biologically correct question: *did the model correctly rank patients by relative risk?* For a patient who died at time T, the Cox partial likelihood compares their predicted risk against all patients still alive at T. If higher risk was correctly assigned to the patient who died, loss is low. This rank-based objective is what the C-index directly measures.
 
-**Leakage-safe preprocessing** — Gene selection and scaling are fit exclusively on training data, then applied to val/test. This is the correct protocol. Many published notebooks get this wrong by selecting genes on the full dataset before splitting.
-
-**Cox-PH loss** — The survival head is trained with a differentiable Cox partial likelihood that directly optimises rank concordance. The C-index is used only for monitoring — the loss optimises the right objective.
+**SHAP DeepExplainer** — Gene expression models are meaningless without knowing which genes drove each prediction. SHAP values decompose the model's output into per-gene contributions for each patient, making individual predictions auditable and biologically interpretable.
 
 ---
 
@@ -100,75 +123,64 @@ TCGA-BRCA RNA-seq (GDC API)
 
 | Property | Value |
 |---|---|
-| Source | GDC API (streamed — no static files) |
-| Expression workflow | STAR - Counts, FPKM-UQ |
+| Source | GDC API — STAR-Counts, FPKM-UQ (no local download) |
 | Total files queried | 1,200 |
-| Successfully downloaded | 460 patients |
+| Successfully downloaded | 419 patients |
 | Genes per patient | 60,660 ENSEMBL genes |
-| PAM50 labels source | UCSC Xena (TCGA pan-cancer) |
-| Clinical metadata | GDC Cases API (survival time, vital status) |
-| Data split | 70 / 15 / 15 train / val / test |
-
-### PAM50 Class Distribution
-
-| Subtype | Biological Profile |
-|---|---|
-| Luminal A | Low-grade, ER+, best prognosis |
-| Luminal B | ER+, higher proliferation |
-| HER2-enriched | HER2 amplified, targeted therapy eligible |
-| Basal-like | Triple-negative, aggressive, poorest prognosis |
-| Normal-like | Resembles normal breast tissue |
-
-The Luminal A dominance in TCGA-BRCA creates a class imbalance problem that standard accuracy obscures. This is why Macro F1 is used as the primary selection metric throughout v2.
+| Genes used (after selection) | 2,000 (top variance) |
+| PAM50 labels | UCSC Xena (TCGA pan-cancer clinical data) |
+| Clinical data | GDC Cases API — survival days, vital status |
+| Data split | 202 train / 68 val / 68 test |
 
 ---
 
-## Experiment Design
+## Training
 
-v2 runs a structured three-stage experiment before deciding whether to promote new model artifacts:
+| Parameter | Value |
+|---|---|
+| Optimizer | AdamW |
+| Learning rate | 0.001 |
+| Weight decay | 0.0001 |
+| Max epochs | 80 |
+| Early stopping | Patience = 15 |
+| Scheduler | ReduceLROnPlateau (factor=0.5, patience=7) |
+| Batch size | 32 |
+| Gradient clipping | max_norm = 1.0 |
+| Classification loss weight (α) | 1.0 |
+| Survival loss weight (β) | 0.5 |
 
-```
-Stage 1: Baseline Sweep
-  LogReg_balanced / RandomForest_balanced / ExtraTrees_balanced
-  XGBoost / LightGBM
-  → 5-fold stratified CV + holdout evaluation
-
-Stage 2: Multi-Task MLP Variants
-  MLP_small_weighted  (256 → 128 → 64)  dropout=0.35
-  MLP_tiny_weighted   (256 → 64)         dropout=0.40
-  → Trained with class-weighted loss + Cox survival head
-
-Stage 3: Model Selection
-  → Compare all candidates on holdout Macro F1
-  → Compare winner against current deployed app metrics
-  → Save v2 artifacts only if v2 improves on v1
-```
-
-This structure means the notebook provides a portfolio signal regardless of outcome: if v2 wins, the upgrade is justified. If v2 does not win, the experiment itself demonstrates disciplined ML practice.
+Training completed with early stopping at **epoch 19**. Best validation loss: **1.7963**.
 
 ---
 
 ## Results
 
-### Holdout Test Set (Final Model Comparison)
+### Test Set Performance (68 patients, held out)
 
-| Model | Family | Accuracy | Balanced Acc | Macro F1 | Macro AUC | C-Index |
-|---|---|---|---|---|---|---|
-| **MLP_small_weighted** | **MLP** | **0.608** | **0.585** | **0.564** | **0.830** | **0.874** |
-| XGBoost | Baseline | 0.622 | 0.519 | 0.552 | 0.801 | — |
-| ExtraTrees_balanced | Baseline | 0.635 | 0.524 | 0.545 | 0.736 | — |
-| MLP_tiny_weighted | MLP | 0.581 | 0.544 | 0.532 | 0.798 | 0.797 |
-| RandomForest_balanced | Baseline | 0.622 | 0.504 | 0.531 | 0.784 | — |
-| LightGBM | Baseline | 0.622 | 0.514 | 0.530 | 0.754 | — |
-| LogReg_balanced | Baseline | 0.554 | 0.471 | 0.506 | 0.764 | — |
+| Metric | Score |
+|---|---|
+| **Accuracy** | **66.2%** |
+| **Macro F1 Score** | **0.6328** |
+| **Macro AUC-ROC** | **0.8176** |
+| **C-Index (Survival)** | **0.7231** |
 
-**Best model: MLP_small_weighted** — highest Macro F1 (0.564) and Balanced Accuracy (0.585) across the full comparison. Accuracy is intentionally not used as the primary selector — Luminal A's frequency means a classifier that ignores minority subtypes can achieve high accuracy while being clinically useless.
+> C-Index > 0.65 is considered clinically meaningful. 0.5 = random ordering.
 
-**C-Index of 0.874** — the survival head achieves strong rank concordance, meaning the predicted risk scores correctly order patients by relative survival outcome in 87.4% of comparable pairs.
+### Per-Subtype Classification Report
 
-### Why MLP Wins on Macro F1 Despite Lower Raw Accuracy
+| Subtype | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| Basal | 0.88 | 0.78 | 0.82 | 9 |
+| Her2 | 0.60 | 0.60 | 0.60 | 5 |
+| LumA | 0.88 | 0.69 | 0.77 | 32 |
+| LumB | 0.53 | 0.75 | 0.62 | 12 |
+| Normal | 0.31 | 0.40 | 0.35 | 10 |
 
-Tree-based methods (Extra Trees: 63.5% accuracy) score higher on accuracy because they learn to exploit the Luminal A majority. The multi-task MLP with class-weighted loss distributes attention across all five subtypes, which hurts majority-class accuracy but substantially improves performance on Basal-like and HER2-enriched — the clinically critical minority classes.
+The most common confusion is **LumA ↔ LumB** — biologically expected, as these subtypes are transcriptomically adjacent and differ primarily in proliferation rate rather than receptor status. Basal-like achieves the highest F1 (0.82), reflecting its distinct triple-negative gene expression signature.
+
+### Survival Risk Stratification
+
+Patients split at the median predicted risk score into High/Low groups show separated Kaplan-Meier curves (log-rank p = 0.057). The C-Index of **0.7231** confirms the survival head correctly ranks 72.3% of patient pairs by relative risk — well above the 0.5 random baseline.
 
 ---
 
@@ -178,66 +190,60 @@ Tree-based methods (Extra Trees: 63.5% accuracy) score higher on accuracy becaus
 GDC API Query (TCGA-BRCA STAR-Counts FPKM-UQ)
 ↓
 Parallel Download — 20 workers, ThreadPoolExecutor
-  460 / 500 files successful · 5.2 min total
+  419 / 500 files successful · 4.9 min total
 ↓
 Expression Matrix Assembly
-  460 patients × 60,660 genes
+  419 patients × 60,660 genes
 ↓
 PAM50 Label Fetch — UCSC Xena API
-Clinical Metadata Fetch — GDC Cases API
+Clinical Metadata Fetch — GDC Cases API (survival days, vital status)
 ↓
-Inner Join — expression + PAM50 + survival
+Inner Join — expression + PAM50 + clinical → 338 matched patients
 ↓
-70 / 15 / 15 Stratified Split
+Log2 Normalization → Top-2000 Variance Gene Selection → StandardScaler
 ↓
-Log1p Transform (on train → apply to val/test)
-Top-500 Variance Gene Selection (train only — no leakage)
-StandardScaler (train only — no leakage)
+Stratified Split → 202 train / 68 val / 68 test
 ↓
-Stage 1: 5-Fold CV Baseline Sweep
-  LogReg / RF / ExtraTrees / XGBoost / LightGBM
+Multi-Task MLP Training
+  CrossEntropy (α=1.0) + Cox-PH Loss (β=0.5)
+  AdamW · ReduceLROnPlateau · Early stopping at epoch 19
+  Gradient clipping (max_norm=1.0)
 ↓
-Stage 2: Multi-Task MLP Training
-  Class-weighted CrossEntropy + Cox-PH Loss
-  AdamW · ReduceLROnPlateau · Early Stopping (patience=18)
+Evaluation
+  Accuracy · Macro F1 · Macro AUC-ROC (classification)
+  C-Index · Kaplan-Meier · Log-rank test (survival)
 ↓
-Stage 3: Holdout Evaluation + Model Selection
-  Primary metric: Macro F1
+SHAP DeepExplainer
+  Global gene importance · Per-subtype attribution · Per-sample top-10 genes
 ↓
-SHAP Explainability (top selected genes)
-Kaplan-Meier Survival Curves by predicted subtype
-↓
-Artifact Export (models_v2/)
-  best_model.pt / scaler.pkl / label_encoder.pkl / selected_genes.npy
+Gradio App — Demo mode (real TCGA sample) + Custom JSON input
 ```
-
----
-
-## Key Engineering Decisions
-
-### Leakage-Safe Preprocessing
-Gene selection variance is computed **after** the train/val/test split, on the training set only. The same selected gene indices are then used to transform val and test. This is the correct protocol — and the one most commonly violated in published bioinformatics notebooks.
-
-### Differential Loss Weighting
-The combined loss `α × CrossEntropy + β × CoxPH` uses α=1.0 and β=0.25 for the best model. This weights classification as the primary objective while using survival as a regularising secondary task. The β parameter was swept across configurations.
-
-### Parallel GDC Download
-Sequential GDC downloads at ~1 file/sec would take ~8 hours for 500 files. The parallel implementation uses `ThreadPoolExecutor` with 20 workers and achieves 1.6 files/sec, completing in ~5 minutes. Thread-safe writes use a `threading.Lock`.
-
-### Class Weight Computation
-`sklearn.utils.compute_class_weight(class_weight='balanced')` computes per-class weights as `n_samples / (n_classes × class_count)`. These are passed directly to `nn.CrossEntropyLoss(weight=...)` and recomputed per fold to avoid leaking validation label distributions.
 
 ---
 
 ## Explainability
 
-SHAP values are computed on the top selected genes to explain individual subtype predictions. This provides:
+SHAP DeepExplainer computes gene-level attribution values for every prediction. Three levels of explanation are produced:
 
-- Feature importance ranking for the 500 selected genes
-- Per-patient explanation of why a specific PAM50 subtype was assigned
-- Validation that the model is using biologically plausible gene signatures (ESR1 for Luminal, ERBB2 for HER2-enriched, BRCA1/BRCA2 for Basal-like)
+**Global importance** — Mean absolute SHAP across all samples and classes. Identifies which of the 2,000 selected genes most consistently influence subtype predictions across the entire cohort.
 
-Kaplan-Meier curves stratified by predicted PAM50 subtype are generated to verify that the model's risk scores produce statistically separable survival groups (log-rank test).
+**Per-subtype attribution** — Separate SHAP profiles for each PAM50 class, showing which genes drive Basal vs LumA vs HER2 predictions specifically.
+
+**Per-sample top-10 genes** — For every individual prediction in the Gradio app, the top 10 genes contributing to the predicted subtype are returned with their SHAP magnitudes. This is the level of explanation required for any real clinical decision support tool.
+
+---
+
+## Gradio Application
+
+The deployed app provides two inference modes:
+
+**Demo Prediction** — One click runs a complete prediction on a real TCGA-BRCA test sample. Output includes predicted subtype, confidence, probability bar chart for all 5 classes, survival risk score and HIGH/LOW risk level, and the top 10 contributing genes with SHAP values.
+
+**Custom Input (JSON)** — Paste any gene expression profile as a JSON dictionary mapping ENSEMBL gene IDs to FPKM values. The model normalises, selects the relevant 2,000 genes, and returns a structured JSON prediction.
+
+```
+Input format: {"ENSG00000000003": 12.5, "ENSG00000000005": 0.0, ...}
+```
 
 ---
 
@@ -245,25 +251,18 @@ Kaplan-Meier curves stratified by predicted PAM50 subtype are generated to verif
 
 ```
 OncoProfilo/
-├── app.py                           ← Gradio application (deployed model)
+├── app.py                           ← Gradio application
 ├── logic/                           ← Preprocessing + inference utilities
-├── models/                          ← Deployed v1 model artifacts
-│   ├── best_model.pt
-│   ├── scaler.pkl
-│   ├── label_encoder.pkl
-│   └── selected_genes.npy
-├── models_v2/                       ← v2 experiment artifacts (not deployed until promoted)
-│   ├── best_model.pt
-│   ├── model_config.json
-│   ├── scaler.pkl
-│   ├── label_encoder.pkl
-│   ├── selected_genes.npy
-│   └── v2_experiment_summary.json
+├── models/                          ← Trained model artifacts
+│   ├── best_model.pt                ← PyTorch model weights (epoch 19)
+│   ├── scaler.pkl                   ← Fitted StandardScaler
+│   ├── label_encoder.pkl            ← PAM50 label encoder
+│   └── selected_genes.npy           ← Top-2000 selected gene IDs
 ├── notebook/
-│   └── OncoProfilo_v2_Model_Upgrade.ipynb   ← Full training + experiment notebook
-├── results/                         ← Saved plots and metrics
+│   └── OncoProfilo.ipynb            ← Full training notebook
+├── results/                         ← Saved plots (EDA, training curves, SHAP, KM)
 ├── static/                          ← Frontend assets
-├── test_inputs/                     ← Sample inputs for validation
+├── test_inputs/                     ← Sample JSON inputs for validation
 ├── requirements.txt
 └── README.md
 ```
@@ -272,11 +271,11 @@ OncoProfilo/
 
 ## Running the Notebook
 
-> **No data downloads required.** All data is streamed live from the GDC and UCSC Xena APIs on every run.
+> **No data downloads required.** All TCGA-BRCA data is streamed live from the GDC and UCSC Xena APIs on every run. Nothing is saved to disk.
 
 ### Google Colab
 
-Open `notebook/OncoProfilo_v2_Model_Upgrade.ipynb` in Colab and run all cells sequentially. Cell 1 installs all dependencies.
+Open `notebook/OncoProfilo.ipynb` in Colab and run all cells sequentially. Cell 1 installs all dependencies.
 
 ### VS Code
 
@@ -284,11 +283,11 @@ Open `notebook/OncoProfilo_v2_Model_Upgrade.ipynb` in Colab and run all cells se
 git clone https://github.com/muhammedpanchla/OncoProfilo.git
 cd OncoProfilo
 pip install -r requirements.txt
-# Open notebook/OncoProfilo_v2_Model_Upgrade.ipynb
-# Select Python 3.8+ kernel and run all cells
+# Open notebook/OncoProfilo.ipynb
+# Select Python 3.8+ kernel and run Cell 1 first
 ```
 
-> The first cell (`%pip install ...`) must be run before any other cell. The GDC download cell takes approximately 5 minutes.
+> The parallel GDC download cell takes approximately 5 minutes. Do not interrupt it.
 
 ### Running the App
 
@@ -303,33 +302,32 @@ Open: `http://127.0.0.1:7860`
 ## Technologies Used
 
 **Deep Learning**
-- PyTorch — model training, custom Cox-PH loss
+- PyTorch — model architecture, custom Cox-PH loss, training loop
 
 **Machine Learning**
-- scikit-learn — baselines, preprocessing pipeline, stratified CV
-- XGBoost / LightGBM — gradient boosting baselines
+- scikit-learn — variance gene selection, StandardScaler, stratified split, evaluation metrics
 
 **Survival Analysis**
-- lifelines — Kaplan-Meier curves, log-rank test, concordance index
+- lifelines — KaplanMeierFitter, log-rank test, concordance index
 
 **Explainability**
-- SHAP — feature attribution on selected gene set
+- SHAP — DeepExplainer for global, per-subtype, and per-sample gene attribution
 
 **Data**
-- GDC API — TCGA-BRCA RNA-seq expression files (STAR-Counts, FPKM-UQ)
+- GDC API — TCGA-BRCA RNA-seq files (STAR-Counts FPKM-UQ)
 - UCSC Xena API — PAM50 molecular subtype labels
-- pandas / NumPy — data assembly and matrix operations
+- pandas / NumPy — expression matrix assembly and preprocessing
 
 **Deployment**
-- Gradio — web interface
+- Gradio — interactive web application with demo and custom JSON input modes
 
 ---
 
 ## Limitations
 
-- Trained on 460 TCGA-BRCA patients — a larger cohort would improve minority subtype performance
-- Gene selection uses variance as a proxy for informativeness — supervised feature selection methods (e.g. mutual information) may yield better results
-- The survival model uses normalized follow-up time, not raw days — this should be revisited for direct clinical use
+- 338 matched patients after joining expression + PAM50 + clinical — a larger cohort would improve minority subtype performance, particularly Normal-like (F1 = 0.35)
+- Top-variance gene selection is unsupervised — supervised selection methods (mutual information, ANOVA-F) may identify more informative gene sets
+- Early stopping at epoch 19 suggests the model may benefit from stronger regularisation and longer training runs
 - Not validated on external cohorts (METABRIC, SCAN-B)
 - Not a certified medical device. All outputs are for research purposes only
 
@@ -337,7 +335,7 @@ Open: `http://127.0.0.1:7860`
 
 ## ⚠️ Disclaimer
 
-> **Research use only.** OncoProfilo v2 is not a certified medical device and has not undergone clinical validation. All model outputs — including PAM50 subtype predictions and survival risk scores — are for research and educational purposes only. No output from this system should be used in clinical decision-making without review by a qualified medical professional. The author accepts no liability for clinical misuse.
+> **Research use only.** OncoProfilo is not a certified medical device and has not undergone clinical validation. All model outputs — including PAM50 subtype predictions and survival risk scores — are for research and educational purposes only. No output from this system should be used in clinical decision-making without review by a qualified medical professional. The author accepts no liability for clinical misuse.
 
 ---
 
