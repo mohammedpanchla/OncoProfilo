@@ -59,22 +59,22 @@ TCGA-BRCA RNA-seq (GDC API — streamed, no local save)
   Log2 Normalization → StandardScaler
               ↓
 ┌─────────────────────────────────────────────┐
-│           OncoProfilo (Multi-Task MLP)       │
+│           OncoProfilo (Multi-Task MLP)      │
 │                                             │
 │  Input (2000)                               │
-│      → Linear(2000, 512) → BN → ReLU       │
+│      → Linear(2000, 512) → BN → ReLU        │
 │      → Dropout(0.40)                        │
-│      → Linear(512, 256)  → BN → ReLU       │
+│      → Linear(512, 256)  → BN → ReLU        │
 │      → Dropout(0.30)                        │
-│      → Linear(256, 128)  → BN → ReLU       │
+│      → Linear(256, 128)  → BN → ReLU        │
 │                  ↓                          │
 │         Shared Encoder (128-dim)            │
 │              /            \                 │
 │   Subtype Head          Survival Head       │
-│  Linear → ReLU          Linear → ReLU      │
-│  → Dropout(0.2)         → Dropout(0.2)     │
-│  → Linear(64, 5)        → Linear(64, 1)    │
-│  PAM50 Classes          → Sigmoid          │
+│  Linear → ReLU          Linear → ReLU       │
+│  → Dropout(0.2)         → Dropout(0.2)      │
+│  → Linear(64, 5)        → Linear(64, 1)     │
+│  PAM50 Classes          → Sigmoid           │
 │                          Cox Risk Score     │
 └─────────────────────────────────────────────┘
          ↓                       ↓
