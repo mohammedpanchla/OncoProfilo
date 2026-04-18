@@ -1,0 +1,72 @@
+{
+  "test_inputs/basal_like.json": {
+    "predicted_subtype": "Basal",
+    "confidence": 99.9,
+    "probabilities": {
+      "Basal": 99.9,
+      "Her2": 0.0,
+      "LumA": 0.0,
+      "LumB": 0.0,
+      "Normal": 0.0
+    },
+    "risk_score": 0.5017,
+    "risk_level": "HIGH",
+    "source": "custom"
+  },
+  "test_inputs/her2_like.json": {
+    "predicted_subtype": "Her2",
+    "confidence": 99.8,
+    "probabilities": {
+      "Basal": 0.1,
+      "Her2": 99.8,
+      "LumA": 0.1,
+      "LumB": 0.1,
+      "Normal": 0.0
+    },
+    "risk_score": 0.2133,
+    "risk_level": "HIGH",
+    "source": "custom"
+  },
+  "test_inputs/luma_like.json": {
+    "predicted_subtype": "LumA",
+    "confidence": 100.0,
+    "probabilities": {
+      "Basal": 0.0,
+      "Her2": 0.0,
+      "LumA": 100.0,
+      "LumB": 0.0,
+      "Normal": 0.0
+    },
+    "risk_score": 0.1994,
+    "risk_level": "LOW",
+    "source": "custom"
+  },
+  "test_inputs/lumb_like.json": {
+    "predicted_subtype": "LumB",
+    "confidence": 99.9,
+    "probabilities": {
+      "Basal": 0.0,
+      "Her2": 0.0,
+      "LumA": 0.0,
+      "LumB": 99.9,
+      "Normal": 0.0
+    },
+    "risk_score": 0.7363,
+    "risk_level": "MODERATE",
+    "source": "custom"
+  },
+  "test_inputs/normal_like.json": {
+    "predicted_subtype": "Normal",
+    "confidence": 99.6,
+    "probabilities": {
+      "Basal": 0.1,
+      "Her2": 0.0,
+      "LumA": 0.2,
+      "LumB": 0.0,
+      "Normal": 99.6
+    },
+    "risk_score": 0.4699,
+    "risk_level": "LOW",
+    "source": "custom"
+  }
+}

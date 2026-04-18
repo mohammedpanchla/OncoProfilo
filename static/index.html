@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>OncoProfilo | Breast Cancer Molecular Profiling</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700;8..60,800&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+
+:root {
+  --ink: #17211d;
+  --ink-strong: #0c1210;
+  --muted: #66736d;
+  --soft: #edf3ef;
+  --line: #dce5df;
+  --surface: #ffffff;
+  --surface-2: #f8fbf8;
+  --rail: #101713;
+  --rail-2: #18221d;
+  --teal: #008f7a;
+  --teal-soft: #dff5ef;
+  --green: #1f9d55;
+  --red: #d94f45;
+  --amber: #b7791f;
+  --violet: #7666d8;
+  --shadow: 0 16px 50px rgba(23, 33, 29, 0.08);
+  --shadow-sm: 0 8px 24px rgba(23, 33, 29, 0.06);
+  --radius: 8px;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --serif: "Tiempos Text", "TiemposText", "Tiempos Headline", "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+
+html, body { min-height: 100%; }
+
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background:
+    linear-gradient(120deg, rgba(0, 143, 122, 0.08), transparent 34%),
+    linear-gradient(300deg, rgba(217, 79, 69, 0.06), transparent 32%),
+    var(--soft);
+  display: flex;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+button, textarea, input { font: inherit; }
+button, textarea, input, .nav-item, .badge, .sample-btn, .file-drop { font-family: var(--sans); }
+button { border: 0; cursor: pointer; }
+img { display: block; max-width: 100%; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c6d2cb; border-radius: 8px; }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 276px minmax(0, 1fr);
+  width: 100%;
+  min-height: 100vh;
+  height: auto;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: var(--rail);
+  color: #d8e6df;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(216, 230, 223, 0.12);
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #e9fffa;
+  background: linear-gradient(135deg, var(--teal), #4eb8a1);
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.brand-name {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.brand-sub {
+  color: #91a49b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.nav-block { padding: 22px 0 8px; }
+
+.eyebrow {
+  font-family: var(--mono);
+  color: #7e9188;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  color: #aebfb7;
+  background: transparent;
+  border-radius: 8px;
+  text-align: left;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.nav-item:hover { background: var(--rail-2); color: #ffffff; }
+
+.nav-item.active {
+  background: #e8fff8;
+  color: #08352f;
+  font-weight: 700;
+}
+
+.nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 8px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.rail-panel {
+  margin-top: auto;
+  border: 1px solid rgba(216, 230, 223, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rail-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(216, 230, 223, 0.10);
+  font-size: 12px;
+  color: #9fafaa;
+}
+
+.rail-stat:last-child { border-bottom: 0; }
+
+.rail-stat strong {
+  color: #79e0c8;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.model-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9fafaa;
+  font-size: 12px;
+  margin-top: 14px;
+}
+
+.pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 8px;
+  background: var(--green);
+  box-shadow: 0 0 0 6px rgba(31, 157, 85, 0.14);
+}
+
+.main {
+  min-width: 0;
+  min-height: 100vh;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  height: 74px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 0 32px;
+}
+
+.topbar h1 {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.topbar p {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #3d4b45;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.badge.live {
+  color: #056a5b;
+  border-color: #afdcd2;
+  background: #e7f8f3;
+}
+
+.content {
+  flex: 1;
+  overflow: visible;
+  padding: 28px 32px 42px;
+}
+
+.panel { display: none; animation: rise 0.22s ease both; }
+.panel.active { display: block; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.hero {
+  background:
+    linear-gradient(135deg, rgba(0, 143, 122, 0.12), rgba(217, 79, 69, 0.07)),
+    var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 28px;
+  margin-bottom: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+.hero h2 {
+  font-family: var(--serif);
+  font-size: 38px;
+  line-height: 1.02;
+  letter-spacing: 0;
+  max-width: 760px;
+}
+
+.hero p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+  max-width: 760px;
+  margin-top: 14px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metric-tile,
+.card,
+.workspace-panel,
+.visual-tile,
+.result-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-tile {
+  padding: 16px;
+  min-height: 112px;
+}
+
+.metric-label {
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.metric-value {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--ink-strong);
+  margin-top: 12px;
+  letter-spacing: 0;
+}
+
+.metric-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  color: #ffffff;
+  background: var(--teal);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  background: #007c6a;
+  box-shadow: 0 14px 30px rgba(0, 143, 122, 0.18);
+}
+
+.button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.button.secondary {
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.button.secondary:hover {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.button.danger {
+  background: #ffffff;
+  color: var(--red);
+  border: 1px solid rgba(217, 79, 69, 0.28);
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.card,
+.workspace-panel,
+.result-panel {
+  padding: 22px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.section-head h3 {
+  font-family: var(--serif);
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.section-head p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+
+.step-list {
+  display: grid;
+  gap: 12px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.step-num {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--teal-soft);
+  color: #006e60;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.step strong { display: block; margin-bottom: 4px; }
+.step span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.format-card {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 13px;
+}
+
+.format-card strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.format-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+.file-drop {
+  border: 1px dashed #a8b8b0;
+  background: #fbfdfb;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 58px;
+}
+
+.file-drop strong {
+  display: block;
+  font-size: 13px;
+}
+
+.file-drop span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.file-drop input { display: none; }
+
+.sample-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sample-btn {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sample-btn:hover { border-color: #9ecfc4; background: #f0faf7; }
+
+.input-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 290px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfb;
+  color: var(--ink);
+  padding: 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  outline: none;
+}
+
+textarea:focus {
+  border-color: #82c8bb;
+  box-shadow: 0 0 0 4px rgba(0, 143, 122, 0.10);
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.quality-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.quality-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.quality-item strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 16px;
+  margin-top: 7px;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.error-msg {
+  display: none;
+  margin-top: 14px;
+  padding: 12px 14px;
+  color: #9f2d27;
+  background: #fff0ee;
+  border: 1px solid rgba(217, 79, 69, 0.22);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.result-panel {
+  display: none;
+  position: sticky;
+  top: 18px;
+}
+
+.result-panel.show { display: block; }
+
+.result-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 168px;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.subtype-box {
+  background: #111713;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  min-height: 138px;
+}
+
+.result-label {
+  color: #79e0c8;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.result-value {
+  font-family: var(--mono);
+  font-size: 40px;
+  font-weight: 800;
+  margin-top: 12px;
+  letter-spacing: 0;
+}
+
+.result-conf {
+  color: #b5c6be;
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.risk-box {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+  background: var(--surface-2);
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 104px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.risk-badge.HIGH { color: var(--red); background: #fff0ee; border: 1px solid rgba(217, 79, 69, 0.22); }
+.risk-badge.MODERATE { color: var(--amber); background: #fff8e8; border: 1px solid rgba(183, 121, 31, 0.24); }
+.risk-badge.LOW { color: var(--green); background: #ebf8ef; border: 1px solid rgba(31, 157, 85, 0.24); }
+
+.risk-score {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-top: 9px;
+}
+
+.prob-title {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  margin-bottom: 12px;
+}
+
+.prob-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 54px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.prob-name,
+.prob-pct {
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.prob-pct { text-align: right; }
+
+.prob-track {
+  height: 10px;
+  background: #e7eee9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.prob-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 8px;
+  background: var(--teal);
+  transition: width 0.5s ease;
+}
+
+.prob-bar.dim { background: #cbd7d0; }
+
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.42);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.72s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.genes-table,
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.genes-table th,
+.perf-table th {
+  color: var(--muted);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0;
+  font-size: 11px;
+  text-align: left;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.genes-table td,
+.perf-table td {
+  padding: 11px 8px;
+  border-bottom: 1px solid #edf2ee;
+  font-family: var(--mono);
+  color: #38443f;
+}
+
+.rank-cell { color: var(--muted); }
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.visual-tile { overflow: hidden; }
+
+.visual-copy {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.visual-copy strong { display: block; }
+.visual-copy span { color: var(--muted); font-size: 13px; margin-top: 4px; display: block; }
+
+.visual-tile img {
+  width: 100%;
+  height: 320px;
+  object-fit: contain;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(330px, 0.8fr);
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.dist-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 42px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 13px;
+}
+
+.dist-name,
+.dist-count {
+  font-family: var(--mono);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dist-count { text-align: right; }
+.dist-track { height: 11px; background: #e7eee9; border-radius: 8px; overflow: hidden; }
+.dist-bar { height: 100%; border-radius: 8px; }
+
+.risk-pill {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.risk-pill.HIGH { color: var(--red); background: #fff0ee; }
+.risk-pill.MODERATE { color: var(--amber); background: #fff8e8; }
+.risk-pill.LOW { color: var(--green); background: #ebf8ef; }
+
+.info-list {
+  display: grid;
+  gap: 10px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.info-row strong {
+  color: var(--ink);
+  font-family: var(--mono);
+  text-align: right;
+}
+
+.about-copy {
+  color: var(--muted);
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.about-copy h3 {
+  font-family: var(--serif);
+  color: var(--ink);
+  font-size: 18px;
+  margin: 24px 0 10px;
+}
+
+.about-copy h3:first-child { margin-top: 0; }
+
+.mobile-menu { display: none; }
+
+@media (max-width: 1100px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: static;
+    min-height: auto;
+    padding: 14px 18px;
+  }
+  .brand { padding-bottom: 14px; }
+  .nav-block {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 14px 0 0;
+  }
+  .nav-block .eyebrow,
+  .rail-panel,
+  .model-state { display: none; }
+  .nav-item { white-space: nowrap; width: auto; }
+  .topbar { height: auto; padding: 18px; align-items: flex-start; flex-direction: column; }
+  .badges { justify-content: flex-start; }
+  body { overflow: auto; }
+  .main { height: auto; }
+  .content { overflow: visible; padding: 18px; }
+  .hero,
+  .section-grid,
+  .workspace-grid,
+  .two-col { grid-template-columns: 1fr; }
+  .result-panel { position: static; }
+}
+
+@media (max-width: 720px) {
+  .hero { padding: 20px; }
+  .hero h2 { font-size: 28px; }
+  .hero-metrics,
+  .dashboard-grid,
+  .format-grid,
+  .quality-grid,
+  .visual-grid,
+  .result-hero { grid-template-columns: 1fr; }
+  .upload-row { grid-template-columns: 1fr; }
+  .visual-tile img { height: 240px; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">OP</div>
+      <div>
+        <div class="brand-name">OncoProfilo</div>
+        <div class="brand-sub">Breast cancer molecular profiling</div>
+      </div>
+    </div>
+
+    <div class="nav-block">
+      <div class="eyebrow">Workspace</div>
+      <button class="nav-item active" onclick="switchPanel('demo', this)"><span class="nav-dot"></span> Demo run</button>
+      <button class="nav-item" onclick="switchPanel('custom', this)"><span class="nav-dot"></span> Custom profile</button>
+      <button class="nav-item" onclick="switchPanel('dashboard', this)"><span class="nav-dot"></span> Model dashboard</button>
+      <button class="nav-item" onclick="switchPanel('about', this)"><span class="nav-dot"></span> Method</button>
+    </div>
+
+    <div class="rail-panel">
+      <div class="rail-stat"><span>Accuracy</span><strong>66.18%</strong></div>
+      <div class="rail-stat"><span>AUC-ROC</span><strong>0.8176</strong></div>
+      <div class="rail-stat"><span>C-index</span><strong>0.7231</strong></div>
+      <div class="rail-stat"><span>Patients</span><strong>338</strong></div>
+    </div>
+
+    <div class="model-state"><span class="pulse"></span><span id="model-state-text">Checking model</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="topbar-title">Demo Run</h1>
+        <p id="topbar-sub">PAM50 subtype and survival risk from RNA-seq FPKM expression.</p>
+      </div>
+      <div class="badges">
+        <span class="badge live" id="loaded-badge">Live model</span>
+        <span class="badge">TCGA-BRCA</span>
+        <span class="badge">2,000 genes</span>
+        <span class="badge">PyTorch + FastAPI</span>
+      </div>
+    </header>
+
+    <section class="content">
+      <div id="panel-demo" class="panel active">
+        <div class="hero">
+          <div>
+            <div class="eyebrow">Molecular subtype inference</div>
+            <h2>Classify a breast tumor profile in one clean pass.</h2>
+            <p>Run the held-out demo sample, review the probability spread, and inspect the survival-risk estimate before moving to your own RNA-seq profile.</p>
+            <div class="hero-actions">
+              <button class="button" id="demo-btn" onclick="runDemo()">Run demo prediction</button>
+              <button class="button secondary" onclick="switchPanelByName('custom')">Open custom input</button>
+            </div>
+          </div>
+          <div class="hero-metrics">
+            <div class="metric-tile"><div class="metric-label">Classes</div><div class="metric-value">5</div><div class="metric-note">Basal, Her2, LumA, LumB, Normal</div></div>
+            <div class="metric-tile"><div class="metric-label">Inputs</div><div class="metric-value">2K</div><div class="metric-note">Selected gene features</div></div>
+            <div class="metric-tile"><div class="metric-label">AUC-ROC</div><div class="metric-value">0.82</div><div class="metric-note">Macro one-vs-rest</div></div>
+            <div class="metric-tile"><div class="metric-label">Risk</div><div class="metric-value">Cox</div><div class="metric-note">Survival score head</div></div>
+          </div>
+        </div>
+
+        <div class="section-grid">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h3>Prediction Flow</h3>
+                <p>The same preprocessing path is used for demo and custom profiles.</p>
+              </div>
+            </div>
+            <div class="step-list">
+              <div class="step"><div class="step-num">01</div><div><strong>Expression profile</strong><span>FPKM values are mapped by Ensembl gene ID. Missing genes default to 0.</span></div></div>
+              <div class="step"><div class="step-num">02</div><div><strong>Model transform</strong><span>Values are log2-transformed, scaled with the saved StandardScaler, and passed into the MLP.</span></div></div>
+              <div class="step"><div class="step-num">03</div><div><strong>Subtype and risk</strong><span>The subtype head returns PAM50 probabilities; the survival head returns the risk score.</span></div></div>
+            </div>
+          </div>
+
+          <div class="result-panel" id="demo-result">
+            <div class="section-head">
+              <div>
+                <h3>Demo Result</h3>
+                <p>Held-out sample prediction.</p>
+              </div>
+            </div>
+            <div class="result-hero">
+              <div class="subtype-box">
+                <div class="result-label">Predicted subtype</div>
+                <div class="result-value" id="res-subtype">-</div>
+                <div class="result-conf" id="res-conf">Confidence: -</div>
+              </div>
+              <div class="risk-box">
+                <div class="result-label">Risk</div>
+                <div class="risk-badge" id="res-risk-badge">-</div>
+                <div class="risk-score" id="res-risk-score">Score: -</div>
+              </div>
+            </div>
+            <div class="prob-title">Subtype probabilities</div>
+            <div id="prob-bars"></div>
+            <div style="margin-top:20px;">
+              <div class="prob-title">Top contributing genes</div>
+              <table class="genes-table">
+                <thead><tr><th>#</th><th>Gene ID</th><th>SHAP score</th></tr></thead>
+                <tbody id="genes-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="error-msg" id="demo-error"></div>
+      </div>
+
+      <div id="panel-custom" class="panel">
+        <div class="workspace-grid">
+          <div class="workspace-panel">
+            <div class="section-head">
+              <div>
+                <div class="eyebrow">Custom profile</div>
+                <h3>Paste or upload gene expression data.</h3>
+                <p>JSON is accepted directly. CSV and TSV are converted in the browser before inference.</p>
+              </div>
+            </div>
+
+            <div class="format-grid">
+              <div class="format-card"><strong>JSON object</strong><span>{"ENSG...": 12.5}</span></div>
+              <div class="format-card"><strong>Two columns</strong><span>gene_id, fpkm_value</span></div>
+              <div class="format-card"><strong>Wide CSV</strong><span>2,000 gene columns with one sample row</span></div>
+            </div>
+
+            <div class="upload-row">
+              <label class="file-drop">
+                <div>
+                  <strong id="file-label">Upload JSON, CSV, TSV, or TXT</strong>
+                  <span>Drop exported expression data here, or choose a local file.</span>
+                </div>
+                <span class="button secondary">Choose file</span>
+                <input type="file" id="profile-file" accept=".json,.csv,.tsv,.txt" onchange="handleFileUpload(event)"/>
+              </label>
+              <button class="button secondary" onclick="clearCustomInput()">Clear</button>
+            </div>
+
+            <div class="sample-row">
+              <button class="sample-btn" onclick="loadSample('basal_like.json')">Load Basal test</button>
+              <button class="sample-btn" onclick="loadSample('her2_like.json')">Load Her2 test</button>
+              <button class="sample-btn" onclick="loadSample('luma_like.json')">Load LumA test</button>
+              <button class="sample-btn" onclick="loadSample('lumb_like.json')">Load LumB test</button>
+              <button class="sample-btn" onclick="loadSample('normal_like.json')">Load Normal test</button>
+            </div>
+
+            <label class="input-label" for="custom-input">
+              <span>Expression input</span>
+              <span id="input-mode">Waiting for data</span>
+            </label>
+            <textarea id="custom-input" spellcheck="false" placeholder='JSON example:
+{
+  "ENSG00000110484.7": 10.9,
+  "ENSG00000159763.4": 22.5
+}
+
+Two-column CSV example:
+gene_id,fpkm
+ENSG00000110484.7,10.9
+ENSG00000159763.4,22.5
+
+Wide CSV example:
+sample_id,ENSG00000110484.7,ENSG00000159763.4
+TCGA_SAMPLE_001,10.9,22.5'></textarea>
+
+            <div class="quality-grid">
+              <div class="quality-item"><span>Detected</span><strong id="detected-count">0</strong></div>
+              <div class="quality-item"><span>Expected</span><strong id="expected-count">2,000</strong></div>
+              <div class="quality-item"><span>Format</span><strong id="detected-format">-</strong></div>
+              <div class="quality-item"><span>Missing policy</span><strong>0 fill</strong></div>
+            </div>
+
+            <div class="form-actions">
+              <button class="button" id="custom-btn" onclick="runCustom()">Predict subtype</button>
+              <button class="button secondary" onclick="copyNormalizedJson()">Copy parsed JSON</button>
+            </div>
+            <div class="error-msg" id="custom-error"></div>
+          </div>
+
+          <div class="result-panel" id="custom-result">
+            <div class="section-head">
+              <div>
+                <h3>Custom Result</h3>
+                <p id="custom-result-note">Awaiting prediction.</p>
+              </div>
+            </div>
+            <div class="result-hero">
+              <div class="subtype-box">
+                <div class="result-label">Predicted subtype</div>
+                <div class="result-value" id="cres-subtype">-</div>
+                <div class="result-conf" id="cres-conf">Confidence: -</div>
+              </div>
+              <div class="risk-box">
+                <div class="result-label">Risk</div>
+                <div class="risk-badge" id="cres-risk-badge">-</div>
+                <div class="risk-score" id="cres-risk-score">Score: -</div>
+              </div>
+            </div>
+            <div class="prob-title">Subtype probabilities</div>
+            <div id="cprob-bars"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-dashboard" class="panel">
+        <div class="dashboard-grid">
+          <div class="metric-tile"><div class="metric-label">Test accuracy</div><div class="metric-value">66.2%</div><div class="metric-note">PAM50 classification</div></div>
+          <div class="metric-tile"><div class="metric-label">AUC-ROC</div><div class="metric-value">0.82</div><div class="metric-note">Macro average</div></div>
+          <div class="metric-tile"><div class="metric-label">C-index</div><div class="metric-value">0.72</div><div class="metric-note">Survival ranking</div></div>
+          <div class="metric-tile"><div class="metric-label">Parameters</div><div class="metric-value">1.2M</div><div class="metric-note">Multi-task MLP</div></div>
+        </div>
+
+        <div class="visual-grid">
+          <div class="visual-tile"><div class="visual-copy"><strong>Confusion Matrix</strong><span>Subtype-level classification behavior.</span></div><img src="/results/confusion_matrix.png" alt="Confusion matrix"/></div>
+          <div class="visual-tile"><div class="visual-copy"><strong>Training Curves</strong><span>Loss and validation movement during training.</span></div><img src="/results/training_curves.png" alt="Training curves"/></div>
+          <div class="visual-tile"><div class="visual-copy"><strong>Risk Stratification</strong><span>Predicted risk separation across the cohort.</span></div><img src="/results/risk_stratification.png" alt="Risk stratification"/></div>
+          <div class="visual-tile"><div class="visual-copy"><strong>SHAP Importance</strong><span>Global feature contribution summary.</span></div><img src="/results/shap_importance.png" alt="SHAP importance"/></div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="section-head"><div><h3>Per-Subtype Performance</h3><p>Classification report on the held-out test split.</p></div></div>
+            <table class="perf-table">
+              <thead><tr><th>Subtype</th><th>Precision</th><th>Recall</th><th>F1</th><th>Support</th><th>Risk</th></tr></thead>
+              <tbody>
+                <tr><td>Basal</td><td>0.88</td><td>0.78</td><td>0.82</td><td>9</td><td><span class="risk-pill HIGH">HIGH</span></td></tr>
+                <tr><td>Her2</td><td>0.60</td><td>0.60</td><td>0.60</td><td>5</td><td><span class="risk-pill HIGH">HIGH</span></td></tr>
+                <tr><td>LumA</td><td>0.88</td><td>0.69</td><td>0.77</td><td>32</td><td><span class="risk-pill LOW">LOW</span></td></tr>
+                <tr><td>LumB</td><td>0.53</td><td>0.75</td><td>0.62</td><td>12</td><td><span class="risk-pill MODERATE">MODERATE</span></td></tr>
+                <tr><td>Normal</td><td>0.31</td><td>0.40</td><td>0.35</td><td>10</td><td><span class="risk-pill LOW">LOW</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <div class="section-head"><div><h3>Dataset Distribution</h3><p>338 merged TCGA-BRCA patients.</p></div></div>
+            <div class="dist-row"><span class="dist-name">LumA</span><div class="dist-track"><div class="dist-bar" style="width:100%;background:var(--teal);"></div></div><span class="dist-count">161</span></div>
+            <div class="dist-row"><span class="dist-name">LumB</span><div class="dist-track"><div class="dist-bar" style="width:37%;background:var(--violet);"></div></div><span class="dist-count">60</span></div>
+            <div class="dist-row"><span class="dist-name">Normal</span><div class="dist-track"><div class="dist-bar" style="width:30%;background:var(--green);"></div></div><span class="dist-count">48</span></div>
+            <div class="dist-row"><span class="dist-name">Basal</span><div class="dist-track"><div class="dist-bar" style="width:28%;background:var(--red);"></div></div><span class="dist-count">45</span></div>
+            <div class="dist-row"><span class="dist-name">Her2</span><div class="dist-track"><div class="dist-bar" style="width:15%;background:var(--amber);"></div></div><span class="dist-count">24</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-about" class="panel">
+        <div class="two-col">
+          <div class="card about-copy">
+            <h3>What It Predicts</h3>
+            <p>OncoProfilo predicts PAM50 molecular subtype and a Cox-style survival risk score from RNA-seq FPKM expression. The classifier returns Basal, Her2, LumA, LumB, or Normal-like subtype probabilities.</p>
+            <h3>Input Contract</h3>
+            <p>The trained network receives 2,000 selected gene features in a fixed order. The custom interface maps gene IDs into that order, applies log2(FPKM + 1), scales values with the saved StandardScaler, and fills any missing expected genes with 0.</p>
+            <h3>Use</h3>
+            <p>This build is intended for model demonstration and engineering validation. Real clinical interpretation needs external validation, calibration, and review by qualified medical professionals.</p>
+          </div>
+          <div class="card">
+            <div class="section-head"><div><h3>Model Configuration</h3><p>Saved training artifacts loaded by FastAPI.</p></div></div>
+            <div class="info-list">
+              <div class="info-row"><span>Architecture</span><strong>Multi-task MLP</strong></div>
+              <div class="info-row"><span>Encoder</span><strong>2000 x 512 x 256 x 128</strong></div>
+              <div class="info-row"><span>Subtype head</span><strong>5-class softmax</strong></div>
+              <div class="info-row"><span>Survival head</span><strong>Scalar risk</strong></div>
+              <div class="info-row"><span>Loss</span><strong>CE + Cox PH</strong></div>
+              <div class="info-row"><span>Framework</span><strong>PyTorch</strong></div>
+              <div class="info-row"><span>Backend</span><strong>FastAPI</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const TITLES = {
+  demo: ['Demo Run', 'PAM50 subtype and survival risk from RNA-seq FPKM expression.'],
+  custom: ['Custom Profile', 'Paste JSON, CSV, TSV, or upload a local expression file.'],
+  dashboard: ['Model Dashboard', 'Training metrics, cohort balance, and saved result figures.'],
+  about: ['Method', 'Input contract, model path, and intended use.']
+};
+
+let parsedCache = null;
+let modelGenes = 2000;
+
+function switchPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(panel => panel.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('topbar-title').textContent = TITLES[name][0];
+  document.getElementById('topbar-sub').textContent = TITLES[name][1];
+}
+
+function switchPanelByName(name) {
+  const buttons = Array.from(document.querySelectorAll('.nav-item'));
+  const button = buttons.find(btn => btn.textContent.toLowerCase().includes(name === 'custom' ? 'custom' : name));
+  if (button) switchPanel(name, button);
+}
+
+function setError(id, message) {
+  const el = document.getElementById(id);
+  el.textContent = message;
+  el.style.display = message ? 'block' : 'none';
+}
+
+function renderProbBars(containerId, probs) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const maxVal = Math.max(...Object.values(probs));
+  Object.entries(probs)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([name, pct]) => {
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+      row.innerHTML = `
+        <span class="prob-name">${name}</span>
+        <div class="prob-track"><div class="prob-bar ${pct === maxVal ? '' : 'dim'}" style="width:${Number(pct).toFixed(1)}%"></div></div>
+        <span class="prob-pct">${Number(pct).toFixed(1)}%</span>`;
+      container.appendChild(row);
+    });
+}
+
+function applyRiskBadge(badgeId, scoreId, level, score) {
+  const badge = document.getElementById(badgeId);
+  badge.textContent = level;
+  badge.className = 'risk-badge ' + level;
+  document.getElementById(scoreId).textContent = `Score: ${Number(score).toFixed(4)}`;
+}
+
+function renderResult(prefix, data) {
+  document.getElementById(prefix + 'subtype').textContent = data.predicted_subtype;
+  document.getElementById(prefix + 'conf').textContent = `Confidence: ${Number(data.confidence).toFixed(1)}%`;
+  applyRiskBadge(prefix + 'risk-badge', prefix + 'risk-score', data.risk_level, data.risk_score);
+}
+
+async function runDemo() {
+  const btn = document.getElementById('demo-btn');
+  setError('demo-error', '');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Running';
+
+  try {
+    const res = await fetch('/api/predict/demo', { method: 'POST' });
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    renderResult('res-', data);
+    renderProbBars('prob-bars', data.probabilities);
+
+    const tbody = document.getElementById('genes-body');
+    tbody.innerHTML = '';
+    if (Array.isArray(data.top_genes) && data.top_genes.length) {
+      data.top_genes.forEach((gene, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td class="rank-cell">${index + 1}</td><td>${gene.gene}</td><td>${Number(gene.shap).toFixed(6)}</td>`;
+        tbody.appendChild(row);
+      });
+    } else {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);">SHAP values are available from the training notebook.</td></tr>';
+    }
+    document.getElementById('demo-result').classList.add('show');
+  } catch (error) {
+    setError('demo-error', 'Prediction failed: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run demo prediction';
+  }
+}
+
+function isGeneId(value) {
+  return /^ENSG\d+(\.\d+)?$/i.test(String(value || '').trim());
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined) return NaN;
+  const cleaned = String(value).trim().replace(/^"|"$/g, '');
+  if (!cleaned) return NaN;
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? number : NaN;
+}
+
+function splitDelimitedLine(line, delimiter) {
+  const out = [];
+  let cell = '';
+  let quote = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (ch === '"') {
+      quote = !quote;
+    } else if (ch === delimiter && !quote) {
+      out.push(cell.trim());
+      cell = '';
+    } else {
+      cell += ch;
+    }
+  }
+  out.push(cell.trim());
+  return out;
+}
+
+function parseDelimited(text) {
+  const delimiter = text.includes('\t') ? '\t' : ',';
+  const rows = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => splitDelimitedLine(line, delimiter));
+
+  if (!rows.length) throw new Error('No rows detected.');
+
+  const payload = {};
+  const first = rows[0];
+  const wideGeneCount = first.filter(isGeneId).length;
+
+  if (first.length > 2 && wideGeneCount > 0 && rows.length > 1) {
+    const dataRow = rows.find((row, index) => index > 0 && row.some(value => Number.isFinite(toNumber(value))));
+    if (!dataRow) throw new Error('Wide table detected, but no numeric sample row was found.');
+    first.forEach((gene, index) => {
+      if (!isGeneId(gene)) return;
+      const value = toNumber(dataRow[index]);
+      if (Number.isFinite(value)) payload[gene.trim()] = value;
+    });
+    return { payload, format: delimiter === '\t' ? 'Wide TSV' : 'Wide CSV' };
+  }
+
+  rows.forEach(row => {
+    const geneIndex = row.findIndex(isGeneId);
+    if (geneIndex < 0) return;
+    const valueIndex = row.findIndex((cell, index) => index !== geneIndex && Number.isFinite(toNumber(cell)));
+    if (valueIndex < 0) return;
+    payload[row[geneIndex].trim()] = toNumber(row[valueIndex]);
+  });
+
+  if (!Object.keys(payload).length) {
+    throw new Error('Could not find Ensembl gene IDs and numeric expression values.');
+  }
+
+  return { payload, format: delimiter === '\t' ? 'Two-column TSV' : 'Two-column CSV' };
+}
+
+function parseGeneInput(text) {
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error('Paste or upload a gene expression profile first.');
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    const source = parsed.gene_expression && typeof parsed.gene_expression === 'object'
+      ? parsed.gene_expression
+      : parsed;
+    if (!source || Array.isArray(source) || typeof source !== 'object') {
+      throw new Error('JSON must be an object mapping gene IDs to numeric values.');
+    }
+    const payload = {};
+    Object.entries(source).forEach(([gene, value]) => {
+      if (!isGeneId(gene)) return;
+      const number = toNumber(value);
+      if (Number.isFinite(number)) payload[gene.trim()] = number;
+    });
+    if (!Object.keys(payload).length) throw new Error('No valid Ensembl gene IDs were found in the JSON.');
+    return { payload, format: 'JSON' };
+  } catch (error) {
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) throw error;
+  }
+
+  return parseDelimited(trimmed);
+}
+
+function updateInputStats() {
+  const text = document.getElementById('custom-input').value;
+  const mode = document.getElementById('input-mode');
+
+  try {
+    parsedCache = parseGeneInput(text);
+    const count = Object.keys(parsedCache.payload).length;
+    document.getElementById('detected-count').textContent = count.toLocaleString();
+    document.getElementById('expected-count').textContent = modelGenes.toLocaleString();
+    document.getElementById('detected-format').textContent = parsedCache.format;
+    mode.textContent = `${parsedCache.format} detected`;
+    setError('custom-error', '');
+  } catch (error) {
+    parsedCache = null;
+    document.getElementById('detected-count').textContent = '0';
+    document.getElementById('detected-format').textContent = '-';
+    mode.textContent = text.trim() ? 'Needs review' : 'Waiting for data';
+  }
+}
+
+async function runCustom() {
+  const btn = document.getElementById('custom-btn');
+  setError('custom-error', '');
+
+  try {
+    parsedCache = parseGeneInput(document.getElementById('custom-input').value);
+  } catch (error) {
+    setError('custom-error', error.message);
+    updateInputStats();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Predicting';
+
+  try {
+    const res = await fetch('/api/predict/custom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gene_expression: parsedCache.payload })
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Server returned ${res.status}`);
+    }
+    const data = await res.json();
+    renderResult('cres-', data);
+    renderProbBars('cprob-bars', data.probabilities);
+    document.getElementById('custom-result-note').textContent =
+      `${Object.keys(parsedCache.payload).length.toLocaleString()} submitted genes parsed from ${parsedCache.format}.`;
+    document.getElementById('custom-result').classList.add('show');
+    updateInputStats();
+  } catch (error) {
+    setError('custom-error', 'Prediction failed: ' + error.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Predict subtype';
+  }
+}
+
+async function handleFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  document.getElementById('custom-input').value = text;
+  document.getElementById('file-label').textContent = file.name;
+  updateInputStats();
+}
+
+async function loadSample(filename) {
+  setError('custom-error', '');
+  try {
+    const res = await fetch('/test_inputs/' + filename);
+    if (!res.ok) throw new Error(`Could not load ${filename}`);
+    const text = await res.text();
+    document.getElementById('custom-input').value = text;
+    document.getElementById('file-label').textContent = filename;
+    updateInputStats();
+  } catch (error) {
+    setError('custom-error', error.message);
+  }
+}
+
+function clearCustomInput() {
+  document.getElementById('custom-input').value = '';
+  document.getElementById('profile-file').value = '';
+  document.getElementById('file-label').textContent = 'Upload JSON, CSV, TSV, or TXT';
+  document.getElementById('custom-result').classList.remove('show');
+  setError('custom-error', '');
+  updateInputStats();
+}
+
+async function copyNormalizedJson() {
+  try {
+    parsedCache = parseGeneInput(document.getElementById('custom-input').value);
+    const text = JSON.stringify(parsedCache.payload, null, 2);
+    await navigator.clipboard.writeText(text);
+    document.getElementById('input-mode').textContent = 'Parsed JSON copied';
+  } catch (error) {
+    setError('custom-error', error.message);
+  }
+}
+
+async function loadModelInfo() {
+  try {
+    const res = await fetch('/api/model-info');
+    const data = await res.json();
+    modelGenes = data.stats.n_genes || 2000;
+    document.getElementById('expected-count').textContent = modelGenes.toLocaleString();
+    document.getElementById('model-state-text').textContent = data.loaded ? 'Model active · CPU' : 'Demo mode';
+    document.getElementById('loaded-badge').textContent = data.loaded ? 'Live model' : 'Demo mode';
+  } catch (error) {
+    document.getElementById('model-state-text').textContent = 'Server unavailable';
+    document.getElementById('loaded-badge').textContent = 'Offline';
+  }
+}
+
+document.getElementById('custom-input').addEventListener('input', updateInputStats);
+loadModelInfo();
+</script>
+</body>
+</html>

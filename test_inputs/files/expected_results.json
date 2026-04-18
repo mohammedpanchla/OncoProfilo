@@ -1,0 +1,52 @@
+{
+  "hard_test_inputs/hard_basal.csv": {
+    "predicted_subtype": "Basal",
+    "confidence_range": [
+      55,
+      82
+    ],
+    "note": "Blended 72% Basal + 28% Her2 signal. Should predict Basal but Her2 probability will be elevated (~15-35%).",
+    "risk_level": "HIGH",
+    "hardness": "HARD \u2014 Basal/Her2 is the most clinically confused pair"
+  },
+  "hard_test_inputs/hard_her2.csv": {
+    "predicted_subtype": "Her2",
+    "confidence_range": [
+      52,
+      78
+    ],
+    "note": "Blended 68% Her2 + 32% LumB. LumB probability likely 15-40%. Classic HER2+/HR+ borderline case.",
+    "risk_level": "HIGH",
+    "hardness": "HARD \u2014 Her2/LumB confusion is common in HER2+/HR+ tumors"
+  },
+  "hard_test_inputs/hard_luma.csv": {
+    "predicted_subtype": "LumA",
+    "confidence_range": [
+      50,
+      75
+    ],
+    "note": "65% LumA + 35% Normal. The most similar subtype pair biologically. Normal probability 20-45% expected.",
+    "risk_level": "LOW",
+    "hardness": "VERY HARD \u2014 LumA/Normal have near-identical expression profiles"
+  },
+  "hard_test_inputs/hard_lumb.csv": {
+    "predicted_subtype": "LumB",
+    "confidence_range": [
+      53,
+      80
+    ],
+    "note": "67% LumB + 33% LumA. The #1 confusion pair in your confusion matrix. LumA probability 15-40%.",
+    "risk_level": "MODERATE",
+    "hardness": "VERY HARD \u2014 Confirmed most frequent misclassification in your test results"
+  },
+  "hard_test_inputs/hard_normal.csv": {
+    "predicted_subtype": "Normal",
+    "confidence_range": [
+      45,
+      72
+    ],
+    "note": "70% Normal + 30% LumA. Normal-like is the weakest class (35% F1 in your test). May fail entirely.",
+    "risk_level": "LOW",
+    "hardness": "EXTREME \u2014 Normal had only 35% F1. This is the model's genuine weakness."
+  }
+}
